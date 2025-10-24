@@ -323,6 +323,7 @@ function serveStatic(app2) {
 
 // server/index.ts
 var app = express2();
+app.set("trust proxy", 1);
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "onecg-genesys-billing-secret-key",
@@ -331,8 +332,9 @@ app.use(
     cookie: {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1e3
+      maxAge: 24 * 60 * 60 * 1e3,
       // 24 hours
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
     }
   })
 );
