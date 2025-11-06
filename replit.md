@@ -24,14 +24,28 @@ The application is fully functional with:
 - ✅ Comprehensive billing report display
 
 ## Recent Changes
-- **2025-10-24**: Initial MVP implementation
-  - Implemented session-based authentication with express-session
-  - Created client management system with in-memory storage
-  - Built Genesys API proxy endpoints for secure token handling
-  - Designed professional dashboard UI with sidebar navigation
-  - Added billing period selection and report generation
-  - Implemented authentication guards on all protected routes
-  - Added proper loading and error states throughout the application
+- **2025-11-06**: UI Redesign - Genesys Cloud Billing Page Match
+  - **Redesigned billing report with tabbed interface**: Now matches Genesys Cloud Billing page layout
+    - Added 6 tabs: Users, Apps, Devices, Resources, Messaging, Storage
+    - Each tab filters usage data based on `grouping` field
+    - Users: filters `user-license`, `billable-app-usage-license`, `billable-app-concurrent-license`
+    - Apps: filters `billable-app-org-license`
+    - Devices: filters `device`
+    - Resources: filters `resource` (excludes Genesys Cloud Voice items)
+    - Messaging: filters `messaging`, `messaging-usage`
+    - Storage: filters `storage`, `storage-category`
+  - **Updated billing calculation formula**: Changed to `total = usageQuantity × overagePrice`
+    - Previous formula only calculated overage charges
+    - New formula calculates total cost per item
+  - **Added Total Billing Amount display**: Shows sum of all tab totals at the top
+  - **Summary cards for each tab**: Display total items and total cost per category
+  - **Improved table structure**: Name, Part Number, Unit Type, Quantity, Price, Total
+  - **Excludes third-party items** from all calculations
+
+- **2025-10-24**: Critical Updates
+  - **Fixed session cookies for Railway deployment**: Added `trust proxy` setting and `sameSite: 'lax'` for proper session handling
+  - **Fixed login credentials**: Now accepts "once"/"once" OR "onecg"/"onecg"
+  - Initial MVP implementation with session-based auth, client management, and Genesys API integration
 
 ## Project Architecture
 

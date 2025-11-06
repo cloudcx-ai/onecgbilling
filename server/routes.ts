@@ -29,7 +29,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { username, password } = req.body;
 
       // Hardcoded authentication for MVP
-      if (username === "once/onecg" && password === "once/onecg") {
+      // Accept either "once"/"once" or "onecg"/"onecg"
+      const validCredentials = 
+        (username === "once" && password === "once") ||
+        (username === "onecg" && password === "onecg");
+
+      if (validCredentials) {
         req.session.isAuthenticated = true;
         res.json({ success: true, message: "Login successful" });
       } else {

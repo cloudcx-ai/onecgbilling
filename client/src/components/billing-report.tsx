@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Calendar, FileText, Loader2 } from "lucide-react";
+import { Calendar, FileText, Loader2, Users, AppWindow, Smartphone, Server, MessageSquare, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -10,9 +10,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import type { BillingPeriodsResponse, SubscriptionOverview } from "@shared/schema";
+import type { BillingPeriodsResponse, SubscriptionOverview, Usage } from "@shared/schema";
 import { format, parseISO } from "date-fns";
 
 interface BillingReportProps {
@@ -100,15 +101,65 @@ export function BillingReport({ clientId, clientName }: BillingReportProps) {
 
   const reportData = subscriptionMutation.data;
 
-  // Calculate total usage cost
-  const totalCost = useMemo(() => {
-    if (!reportData?.usages) return 0;
-    return reportData.usages.reduce((sum, usage) => {
+  // Filter usages by category (exclude third-party)
+  const filteredUsages = useMemo(() => {
+    if (!reportData?.usages) return {
+      users: [],
+      apps: [],
+      devices: [],
+      resources: [],
+      messaging: [],
+      storage: [],
+    };
+
+    const usages = reportData.usages.filter(u => !u.isThirdParty);
+
+    return {
+      users: usages.filter(u => 
+        u.grouping === "user-license" || 
+        u.grouping === "billable-app-usage-license" || 
+        u.grouping === "billable-app-concurrent-license"
+      ),
+      apps: usages.filter(u => u.grouping === "billable-app-org-license"),
+      devices: usages.filter(u => u.grouping === "device"),
+      resources: usages.filter(u => 
+        u.grouping === "resource" && 
+        !u.name?.toLowerCase().includes("genesys cloud voice")
+      ),
+      messaging: usages.filter(u => 
+        u.grouping === "messaging" || 
+        u.grouping === "messaging-usage"
+      ),
+      storage: usages.filter(u => 
+        u.grouping === "storage" || 
+        u.grouping === "storage-category"
+      ),
+    };
+  }, [reportData]);
+
+  // Calculate total for each category and overall
+  const calculateTotal = (usages: Usage[]) => {
+    return usages.reduce((sum, usage) => {
       const qty = parseFloat(usage.usageQuantity || "0");
       const price = parseFloat(usage.overagePrice || "0");
       return sum + (qty * price);
     }, 0);
-  }, [reportData]);
+  };
+
+  const totals = useMemo(() => {
+    return {
+      users: calculateTotal(filteredUsages.users),
+      apps: calculateTotal(filteredUsages.apps),
+      devices: calculateTotal(filteredUsages.devices),
+      resources: calculateTotal(filteredUsages.resources),
+      messaging: calculateTotal(filteredUsages.messaging),
+      storage: calculateTotal(filteredUsages.storage),
+    };
+  }, [filteredUsages]);
+
+  const totalBillingAmount = useMemo(() => {
+    return Object.values(totals).reduce((sum, val) => sum + val, 0);
+  }, [totals]);
 
   return (
     <div className="space-y-6">
@@ -220,168 +271,233 @@ export function BillingReport({ clientId, clientName }: BillingReportProps) {
       {/* Report Display */}
       {reportData && (
         <div className="space-y-6">
-          {/* Overview Section */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Overview</h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Subscription Type
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-base font-semibold" data-testid="text-subscription-type">
-                    {reportData.subscriptionType || "N/A"}
-                  </p>
-                </CardContent>
-              </Card>
+          {/* Total Billing Amount - Top Display */}
+          <Card className="border-primary">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Billing Amount
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-primary" data-testid="text-total-billing-amount">
+                ${totalBillingAmount.toFixed(2)} {reportData.currency || "USD"}
+              </p>
+            </CardContent>
+          </Card>
 
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Currency
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-base font-semibold" data-testid="text-currency">
-                    {reportData.currency || "USD"}
-                  </p>
-                </CardContent>
-              </Card>
+          {/* Tabbed Interface */}
+          <Tabs defaultValue="users" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-6">
+              <TabsTrigger value="users" className="flex items-center gap-2" data-testid="tab-users">
+                <Users className="h-4 w-4" />
+                <span className="hidden sm:inline">Users</span>
+              </TabsTrigger>
+              <TabsTrigger value="apps" className="flex items-center gap-2" data-testid="tab-apps">
+                <AppWindow className="h-4 w-4" />
+                <span className="hidden sm:inline">Apps</span>
+              </TabsTrigger>
+              <TabsTrigger value="devices" className="flex items-center gap-2" data-testid="tab-devices">
+                <Smartphone className="h-4 w-4" />
+                <span className="hidden sm:inline">Devices</span>
+              </TabsTrigger>
+              <TabsTrigger value="resources" className="flex items-center gap-2" data-testid="tab-resources">
+                <Server className="h-4 w-4" />
+                <span className="hidden sm:inline">Resources</span>
+              </TabsTrigger>
+              <TabsTrigger value="messaging" className="flex items-center gap-2" data-testid="tab-messaging">
+                <MessageSquare className="h-4 w-4" />
+                <span className="hidden sm:inline">Messaging</span>
+              </TabsTrigger>
+              <TabsTrigger value="storage" className="flex items-center gap-2" data-testid="tab-storage">
+                <Database className="h-4 w-4" />
+                <span className="hidden sm:inline">Storage</span>
+              </TabsTrigger>
+            </TabsList>
 
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Total Usage Items
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-base font-semibold">
-                    {reportData.usages?.length || 0}
-                  </p>
-                </CardContent>
-              </Card>
+            {/* Users Tab */}
+            <TabsContent value="users" className="space-y-4">
+              <UsageTable
+                title="User Licenses"
+                usages={filteredUsages.users}
+                total={totals.users}
+                currency={reportData.currency || "USD"}
+              />
+            </TabsContent>
 
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Total Cost
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-base font-semibold">
-                    ${totalCost.toFixed(2)}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+            {/* Apps Tab */}
+            <TabsContent value="apps" className="space-y-4">
+              <UsageTable
+                title="Application Licenses"
+                usages={filteredUsages.apps}
+                total={totals.apps}
+                currency={reportData.currency || "USD"}
+              />
+            </TabsContent>
 
-          {/* Users Section - Usage Table */}
-          {reportData.usages && reportData.usages.length > 0 && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Usage Details</h2>
-              <Card>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-muted/50 border-b">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-sm font-medium text-foreground">Product / Service</th>
-                          <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Grouping</th>
-                          <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Usage Qty</th>
-                          <th className="px-6 py-3 text-right text-sm font-medium text-foreground">Rate</th>
-                          <th className="px-6 py-3 text-right text-sm font-medium text-foreground">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {reportData.usages.map((usage, index) => {
-                          const qty = parseFloat(usage.usageQuantity || "0");
-                          const rate = parseFloat(usage.overagePrice || "0");
-                          const total = qty * rate;
+            {/* Devices Tab */}
+            <TabsContent value="devices" className="space-y-4">
+              <UsageTable
+                title="Device Usage"
+                usages={filteredUsages.devices}
+                total={totals.devices}
+                currency={reportData.currency || "USD"}
+              />
+            </TabsContent>
 
-                          return (
-                            <tr key={index} className="hover-elevate">
-                              <td className="px-6 py-4">
-                                <div>
-                                  <div className="text-sm font-medium text-foreground">
-                                    {usage.name || "N/A"}
-                                  </div>
-                                  {usage.partNumber && (
-                                    <div className="text-xs text-muted-foreground font-mono mt-1">
-                                      {usage.partNumber}
-                                    </div>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 text-center">
-                                <div className="text-sm text-muted-foreground">
-                                  {usage.grouping || "-"}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 text-center">
-                                <div className="text-sm">
-                                  {usage.usageQuantity || "0"} {usage.unitOfMeasureType || ""}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <div className="text-sm">
-                                  ${rate.toFixed(2)}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <div className="text-sm font-medium">
-                                  ${total.toFixed(2)}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                      <tfoot className="border-t bg-muted/50">
-                        <tr>
-                          <td colSpan={4} className="px-6 py-4 text-right text-sm font-semibold">
-                            Total:
-                          </td>
-                          <td className="px-6 py-4 text-right text-base font-bold">
-                            ${totalCost.toFixed(2)}
-                          </td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+            {/* Resources Tab */}
+            <TabsContent value="resources" className="space-y-4">
+              <UsageTable
+                title="Resources (Excludes Cloud Voice)"
+                usages={filteredUsages.resources}
+                total={totals.resources}
+                currency={reportData.currency || "USD"}
+              />
+            </TabsContent>
 
-          {/* Enabled Products */}
-          {reportData.enabledProducts && reportData.enabledProducts.length > 0 && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">
-                Enabled Products ({reportData.enabledProducts.length})
-              </h2>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {reportData.enabledProducts.map((product, index) => (
-                      <div key={index} className="text-sm p-3 rounded-md bg-muted/50">
-                        <div className="font-medium">{product.name || "N/A"}</div>
-                        {product.partNumber && (
-                          <div className="text-xs text-muted-foreground font-mono mt-1">
-                            {product.partNumber}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+            {/* Messaging Tab */}
+            <TabsContent value="messaging" className="space-y-4">
+              <UsageTable
+                title="Messaging Usage"
+                usages={filteredUsages.messaging}
+                total={totals.messaging}
+                currency={reportData.currency || "USD"}
+              />
+            </TabsContent>
+
+            {/* Storage Tab */}
+            <TabsContent value="storage" className="space-y-4">
+              <UsageTable
+                title="Storage Usage"
+                usages={filteredUsages.storage}
+                total={totals.storage}
+                currency={reportData.currency || "USD"}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
       )}
+    </div>
+  );
+}
+
+// Reusable Usage Table Component
+interface UsageTableProps {
+  title: string;
+  usages: Usage[];
+  total: number;
+  currency: string;
+}
+
+function UsageTable({ title, usages, total, currency }: UsageTableProps) {
+  return (
+    <div className="space-y-4">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Items
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{usages.length}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Cost
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold text-primary">
+              ${total.toFixed(2)} {currency}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Data Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {usages.length === 0 ? (
+            <div className="py-12 text-center">
+              <p className="text-sm text-muted-foreground">No usage data available for this category</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/50 border-b">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-sm font-medium text-foreground">Name</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Part Number</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Unit Type</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Quantity</th>
+                    <th className="px-6 py-3 text-right text-sm font-medium text-foreground">Price ({currency})</th>
+                    <th className="px-6 py-3 text-right text-sm font-medium text-foreground">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {usages.map((usage, index) => {
+                    const qty = parseFloat(usage.usageQuantity || "0");
+                    const price = parseFloat(usage.overagePrice || "0");
+                    const itemTotal = qty * price;
+
+                    return (
+                      <tr key={index} className="hover-elevate" data-testid={`row-usage-${index}`}>
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-medium text-foreground">
+                            {usage.name || "N/A"}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="text-xs text-muted-foreground font-mono">
+                            {usage.partNumber || "-"}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="text-sm text-muted-foreground">
+                            {usage.unitOfMeasureType || "-"}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="text-sm font-medium">
+                            {qty.toLocaleString()}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="text-sm">
+                            ${price.toFixed(2)}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="text-sm font-semibold" data-testid={`text-total-${index}`}>
+                            ${itemTotal.toFixed(2)}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot className="border-t bg-muted/50">
+                  <tr>
+                    <td colSpan={5} className="px-6 py-4 text-right text-sm font-semibold">
+                      Total:
+                    </td>
+                    <td className="px-6 py-4 text-right text-base font-bold" data-testid="text-category-total">
+                      ${total.toFixed(2)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

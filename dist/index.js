@@ -84,7 +84,8 @@ async function registerRoutes(app2) {
   app2.post("/api/auth/login", async (req, res) => {
     try {
       const { username, password } = req.body;
-      if (username === "once/onecg" && password === "once/onecg") {
+      const validCredentials = username === "once" && password === "once" || username === "onecg" && password === "onecg";
+      if (validCredentials) {
         req.session.isAuthenticated = true;
         res.json({ success: true, message: "Login successful" });
       } else {
@@ -334,7 +335,8 @@ app.use(
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1e3,
       // 24 hours
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
+      sameSite: "lax"
+      // Use 'lax' for same-site applications
     }
   })
 );
