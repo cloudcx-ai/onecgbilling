@@ -24,6 +24,18 @@ The application is fully functional with:
 - ✅ Comprehensive billing report display
 
 ## Recent Changes
+- **2025-11-07**: Complex Billing Formula Implementation
+  - **Implemented comprehensive billing calculation** with support for prepaid/bundle pricing:
+    - Rule 1: Skip all third-party items (isThirdParty = true)
+    - Rule 2: If usage ≤ prepayQuantity: total = prepayQuantity × prepayPrice
+    - Rule 3: If usage > prepayQuantity: total = (prepayQuantity × prepayPrice) + ((usage - prepayQuantity) × overagePrice)
+    - Rule 4: If no prepay fields exist: total = usage × overagePrice
+    - Rule 5: If isCancellable = false & prepayPrice > 0: include prepay charge even if usage = 0
+  - **Enhanced Usage type** to include bundlePrice, prepaidQuantity, prepaidPrice fields
+  - **Created calculateUsageCharge helper** that applies all billing rules consistently
+  - **Updated all totals** (per-row, per-tab, and grand total) to use the same formula
+  - Formula supports both bundleQuantity/bundlePrice and prepaidQuantity/prepaidPrice field names
+
 - **2025-11-06**: UI Redesign - Genesys Cloud Billing Page Match
   - **Redesigned billing report with tabbed interface**: Now matches Genesys Cloud Billing page layout
     - Added 6 tabs: Users, Apps, Devices, Resources, Messaging, Storage
@@ -34,9 +46,6 @@ The application is fully functional with:
     - Resources: filters `resource` (excludes Genesys Cloud Voice items)
     - Messaging: filters `messaging`, `messaging-usage`
     - Storage: filters `storage`, `storage-category`
-  - **Updated billing calculation formula**: Changed to `total = usageQuantity × overagePrice`
-    - Previous formula only calculated overage charges
-    - New formula calculates total cost per item
   - **Added Total Billing Amount display**: Shows sum of all tab totals at the top
   - **Summary cards for each tab**: Display total items and total cost per category
   - **Improved table structure**: Name, Part Number, Unit Type, Quantity, Price, Total

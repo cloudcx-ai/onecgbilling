@@ -137,13 +137,55 @@ export function BillingReport({ clientId, clientName }: BillingReportProps) {
     };
   }, [reportData]);
 
-  // Calculate total for each category and overall
+  // Calculate charge for a single usage item based on complex billing rules
+  const calculateUsageCharge = (usage: Usage): number => {
+    // Rule 1: Skip if third-party
+    if (usage.isThirdParty) {
+      return 0;
+    }
+
+    // Parse all relevant fields with fallbacks and guard against NaN
+    const usageQty = Number.isFinite(parseFloat(usage.usageQuantity || "0")) 
+      ? parseFloat(usage.usageQuantity || "0") : 0;
+    const overagePrice = Number.isFinite(parseFloat(usage.overagePrice || "0"))
+      ? parseFloat(usage.overagePrice || "0") : 0;
+    
+    // Check for prepay fields (bundleQuantity/bundlePrice or prepaidQuantity/prepaidPrice)
+    const prepayQty = Number.isFinite(parseFloat(usage.bundleQuantity || usage.prepaidQuantity || "0"))
+      ? parseFloat(usage.bundleQuantity || usage.prepaidQuantity || "0") : 0;
+    const prepayPrice = Number.isFinite(parseFloat(usage.bundlePrice || usage.prepaidPrice || "0"))
+      ? parseFloat(usage.bundlePrice || usage.prepaidPrice || "0") : 0;
+    
+    const isCancellable = usage.isCancellable ?? true;
+
+    // Determine if prepay fields exist
+    const hasPrepayData = prepayQty > 0 || prepayPrice > 0;
+
+    // Rule 5: Non-cancellable with prepay price - charge prepay even if usage is 0
+    if (!isCancellable && prepayPrice > 0 && usageQty === 0) {
+      return prepayQty * prepayPrice;
+    }
+
+    // Rule 4: No prepay fields - simple calculation
+    if (!hasPrepayData) {
+      return usageQty * overagePrice;
+    }
+
+    // Rule 2: Usage within prepay quantity
+    if (usageQty <= prepayQty) {
+      return prepayQty * prepayPrice;
+    }
+
+    // Rule 3: Usage exceeds prepay quantity
+    const prepayCharge = prepayQty * prepayPrice;
+    const overageQty = usageQty - prepayQty;
+    const overageCharge = overageQty * overagePrice;
+    return prepayCharge + overageCharge;
+  };
+
+  // Calculate total for each category using the billing formula
   const calculateTotal = (usages: Usage[]) => {
-    return usages.reduce((sum, usage) => {
-      const qty = parseFloat(usage.usageQuantity || "0");
-      const price = parseFloat(usage.overagePrice || "0");
-      return sum + (qty * price);
-    }, 0);
+    return usages.reduce((sum, usage) => sum + calculateUsageCharge(usage), 0);
   };
 
   const totals = useMemo(() => {
@@ -321,6 +363,7 @@ export function BillingReport({ clientId, clientName }: BillingReportProps) {
                 usages={filteredUsages.users}
                 total={totals.users}
                 currency={reportData.currency || "USD"}
+                calculateUsageCharge={calculateUsageCharge}
               />
             </TabsContent>
 
@@ -331,6 +374,7 @@ export function BillingReport({ clientId, clientName }: BillingReportProps) {
                 usages={filteredUsages.apps}
                 total={totals.apps}
                 currency={reportData.currency || "USD"}
+                calculateUsageCharge={calculateUsageCharge}
               />
             </TabsContent>
 
@@ -341,6 +385,7 @@ export function BillingReport({ clientId, clientName }: BillingReportProps) {
                 usages={filteredUsages.devices}
                 total={totals.devices}
                 currency={reportData.currency || "USD"}
+                calculateUsageCharge={calculateUsageCharge}
               />
             </TabsContent>
 
@@ -351,6 +396,7 @@ export function BillingReport({ clientId, clientName }: BillingReportProps) {
                 usages={filteredUsages.resources}
                 total={totals.resources}
                 currency={reportData.currency || "USD"}
+                calculateUsageCharge={calculateUsageCharge}
               />
             </TabsContent>
 
@@ -361,6 +407,7 @@ export function BillingReport({ clientId, clientName }: BillingReportProps) {
                 usages={filteredUsages.messaging}
                 total={totals.messaging}
                 currency={reportData.currency || "USD"}
+                calculateUsageCharge={calculateUsageCharge}
               />
             </TabsContent>
 
@@ -371,6 +418,7 @@ export function BillingReport({ clientId, clientName }: BillingReportProps) {
                 usages={filteredUsages.storage}
                 total={totals.storage}
                 currency={reportData.currency || "USD"}
+                calculateUsageCharge={calculateUsageCharge}
               />
             </TabsContent>
           </Tabs>
@@ -386,9 +434,10 @@ interface UsageTableProps {
   usages: Usage[];
   total: number;
   currency: string;
+  calculateUsageCharge: (usage: Usage) => number;
 }
 
-function UsageTable({ title, usages, total, currency }: UsageTableProps) {
+function UsageTable({ title, usages, total, currency, calculateUsageCharge }: UsageTableProps) {
   return (
     <div className="space-y-4">
       {/* Summary Cards */}
@@ -445,7 +494,9 @@ function UsageTable({ title, usages, total, currency }: UsageTableProps) {
                   {usages.map((usage, index) => {
                     const qty = parseFloat(usage.usageQuantity || "0");
                     const price = parseFloat(usage.overagePrice || "0");
-                    const itemTotal = qty * price;
+                    
+                    // Use the same billing formula as totals
+                    const itemTotal = calculateUsageCharge(usage);
 
                     return (
                       <tr key={index} className="hover-elevate" data-testid={`row-usage-${index}`}>

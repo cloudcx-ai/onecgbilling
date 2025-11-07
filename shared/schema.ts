@@ -49,6 +49,9 @@ export interface Usage {
   overagePrice?: string;
   isCancellable?: boolean;
   bundleQuantity?: string;
+  bundlePrice?: string;
+  prepaidQuantity?: string;
+  prepaidPrice?: string;
   isThirdParty?: boolean;
 }
 
