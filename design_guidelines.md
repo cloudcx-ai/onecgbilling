@@ -1,159 +1,140 @@
-# OneCG Genesys Billing Report - Design Guidelines
+# CloudCX Monitoring Solution - Design Guidelines
 
 ## Design Approach
 
-**Selected Approach:** Design System (Linear-inspired + Material Design principles)
-
-**Justification:** This is a utility-focused, data-heavy dashboard application requiring efficiency, clarity, and professional presentation. The design will combine Linear's clean aesthetics with Material Design's robust component patterns for enterprise applications.
-
-**Key Design Principles:**
-1. Information clarity over decoration
-2. Consistent, predictable interactions
-3. Efficient data presentation
-4. Professional, trustworthy appearance
+**System Selected:** Carbon Design System (IBM)
+**Justification:** This monitoring dashboard is information-dense, enterprise-focused, and requires clear data visualization. Carbon excels at technical applications with complex data displays, status indicators, and form-heavy interfaces.
 
 ## Core Design Elements
 
-### A. Typography
+### Typography
+- **Font Family:** IBM Plex Sans (primary), IBM Plex Mono (code/endpoints)
+- **Scale:**
+  - Page Headers: text-2xl (24px), font-semibold
+  - Section Headers: text-lg (18px), font-medium
+  - Body Text: text-sm (14px), font-normal
+  - Data/Tables: text-sm (14px), font-normal
+  - Labels: text-xs (12px), uppercase, tracking-wide, font-medium
+  - Monospace Data (endpoints, IPs): font-mono, text-sm
 
-**Font Family:**
-- Primary: Inter (via Google Fonts CDN)
-- Monospace: JetBrains Mono (for tokens, timestamps, technical data)
-
-**Type Scale:**
-- Page Headers: text-2xl font-semibold (Client name header)
-- Section Titles: text-lg font-medium
-- Form Labels: text-sm font-medium
-- Body Text: text-base font-normal
-- Helper Text: text-sm font-normal
-- Data/Tables: text-sm font-normal
-- Buttons: text-sm font-medium
-
-### B. Layout System
-
-**Spacing Primitives:** Use Tailwind units of 2, 4, 6, and 8 consistently
+### Layout System
+**Spacing Primitives:** Use Tailwind units of 2, 4, 6, 8, 12, 16
 - Component padding: p-4 or p-6
-- Section spacing: space-y-6
-- Form field gaps: space-y-4
-- Button padding: px-4 py-2
-- Card padding: p-6
+- Section gaps: gap-6 or gap-8
+- Form field spacing: space-y-4
+- Table cell padding: px-4 py-3
+- Card/panel padding: p-6
 
-**Grid System:**
-- Dashboard layout: Fixed sidebar (w-64) + flexible main content (flex-1)
-- Form layouts: Single column, max-w-md for inputs
-- Report displays: Full width with responsive tables/cards
+**Grid Structure:**
+- Main dashboard: Two-column layout on desktop (lg:grid-cols-2), single column on mobile
+- Full-width data tables that scroll horizontally on mobile
+- Sidebar navigation: 240px fixed width on desktop, collapsible hamburger on mobile
 
-**Container Strategy:**
-- Login page: Centered card (max-w-md mx-auto)
-- Dashboard: Full viewport height with sidebar + main area
-- Main content area: p-8 padding, max-w-6xl mx-auto for report content
+## Component Library
 
-### C. Component Library
+### Navigation
+- **Top Bar:** Fixed header with logo, main navigation tabs, user/settings icon
+- **Tabs:** Underline-style for section switching (Targets, Results, Logs)
+- **Breadcrumbs:** For navigating between detail views
 
-**Authentication (Login Page):**
-- Centered card layout on plain background
-- Card: Rounded corners (rounded-lg), shadow (shadow-lg), p-8
-- Logo/Title area at top: text-2xl font-bold, mb-6
-- Input fields: Full width, h-10, px-4, rounded-md, border
-- Submit button: Full width, h-10, rounded-md, font-medium
-- Focus states: Prominent border or ring on all interactive elements
+### Data Display
+- **Tables:** 
+  - Striped rows for readability (alternate row background)
+  - Sticky headers on scroll
+  - Sortable columns with arrow indicators
+  - Hover state on rows
+  - Action buttons in final column (Edit, Delete icons)
+  
+- **Status Pills:**
+  - UP: Small rounded pill, subtle background
+  - DOWN: Small rounded pill, alert background
+  - PENDING: Subtle neutral background
+  - Include icon prefix (checkmark, alert icon)
 
-**Dashboard Layout:**
-- Two-column layout: Sidebar (fixed, w-64) + Main content (flex-1)
-- Sidebar: Full height, p-4, border-r
-- Main content: Full height, p-8, overflow-y-auto
+- **Metric Cards:**
+  - Bordered cards with rounded corners (rounded-lg)
+  - Large number display for key metrics (uptime %, response time)
+  - Small label text above numbers
+  - Sparkline graphs for trends (optional)
 
-**Sidebar Components:**
-- "Add Client" button: w-full, px-4 py-2, rounded-md, font-medium, mb-4
-- Client list: space-y-2
-- Client buttons: w-full, px-4 py-3, rounded-md, text-left, font-medium, hover states
-- Active client indicator: Distinct visual treatment on selected client
+### Forms
+- **Input Fields:**
+  - Full-width within form containers
+  - Clear labels above inputs
+  - Helper text below for guidance
+  - Error states with inline validation messages
+  - Consistent height (h-10)
 
-**Add Client Modal/Form:**
-- Modal overlay: Fixed, full viewport, backdrop blur
-- Modal content: Centered card, max-w-md, p-6, rounded-lg, shadow-xl
-- Form fields: space-y-4
-- Input labels: text-sm font-medium, mb-1
-- Text inputs: w-full, h-10, px-4, rounded-md, border
-- Token input: Monospace font (font-mono)
-- Action buttons: flex justify-end gap-2, mt-6
-- Cancel button: px-4 py-2, rounded-md
-- Submit button: px-4 py-2, rounded-md, font-medium
+- **Form Layouts:**
+  - Vertical stacking of fields with space-y-4
+  - Group related fields with subtle dividers or headings
+  - Action buttons right-aligned at bottom
+  - Primary button + secondary/cancel button pattern
 
-**Main Content Area:**
-- Client header: mb-6
-  - Client name: text-2xl font-semibold, mb-4
-  - Date selector row: flex items-end gap-4, flex-wrap
-  - Dropdown labels: text-sm font-medium, mb-1
-  - Dropdowns: min-w-[200px], h-10, px-4, rounded-md, border
-  - Submit button: h-10, px-6, rounded-md, font-medium
+### Cards & Panels
+- Bordered containers with rounded-lg
+- Subtle shadow on hover for interactive cards
+- Header section with title and optional action button
+- Content padding of p-6
+- Footer section for metadata or actions
 
-**Report Display:**
-- Report container: mt-8, space-y-6
-- Section headers: text-lg font-medium, mb-4, pb-2, border-b
-- Data presentation options:
-  1. **Card Grid** (for summary metrics):
-     - grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4
-     - Card: p-6, rounded-lg, border
-     - Label: text-sm font-medium
-     - Value: text-2xl font-semibold, mt-1
-  2. **Data Table** (for detailed line items):
-     - Full width, rounded-lg, border, overflow-hidden
-     - Header: font-medium, text-sm, px-6 py-3, border-b
-     - Rows: px-6 py-4, border-b, hover states
-     - Alternating row treatment for readability
-  3. **Key-Value Pairs** (for subscription details):
-     - space-y-3
-     - Each pair: flex justify-between, py-2
-     - Key: text-sm font-medium
-     - Value: text-sm, font-mono for technical data
+### Buttons
+- **Primary:** Solid fill, medium weight text
+- **Secondary:** Outlined style
+- **Danger:** For delete actions
+- **Icon Buttons:** For table actions, minimal padding
+- Consistent height (h-10) and padding (px-4)
 
-**Icons:**
-- Use Heroicons (via CDN)
-- Icon sizes: h-5 w-5 for inline, h-6 w-6 for buttons
-- Add Client icon: Plus icon
-- Client list icons: Building/Office icon
-- Calendar icons for date selectors
-- Loading spinner for API calls
+### Real-time Updates
+- **WebSocket Indicators:**
+  - Small pulsing dot showing live connection status
+  - Toast notifications for state changes (slide-in from top-right)
+  - Auto-dismissing success/error messages
 
-**Loading States:**
-- Spinner: Centered, h-8 w-8, animated spin
-- Skeleton loaders for report data: animate-pulse, h-4, rounded, mb-2
-- Loading overlay for API calls: Fixed, full viewport, backdrop blur, centered spinner
+### Log Viewer
+- **Monospace Display:** Full-width code block style
+- **Filtering Controls:** Inline search, time range selector
+- **Auto-scroll Toggle:** Checkbox to follow new logs
+- **Line Numbers:** Optional left gutter
+- **Syntax Highlighting:** For structured log formats (JSON)
 
-**Empty States:**
-- No clients: Centered message in main area
-  - Icon: h-12 w-12, mb-4
-  - Message: text-lg font-medium, mb-2
-  - Sub-message: text-sm, mb-4
-  - CTA: "Add your first client" button
-- No report data: Centered in report area with icon and message
+## Dashboard-Specific Patterns
 
-**Error States:**
-- Error alerts: p-4, rounded-md, border-l-4, mb-4
-- Error icon: h-5 w-5, inline with message
-- Error message: text-sm font-medium
-- Retry button: text-sm, underline, mt-2
+### Overview Dashboard
+- Top row: Summary metrics (4 cards showing total targets, active checks, uptime %, avg response time)
+- Middle section: Target status table (sortable, filterable)
+- Bottom section: Recent alerts/events timeline
 
-### D. Animations
+### Target Management
+- Split view: List on left, details/form on right
+- Quick actions in table rows (test now, edit, disable, delete)
+- Expandable rows for detailed configuration
 
-**Minimal, purposeful animations only:**
-- Modal fade-in: transition-opacity duration-200
-- Button hover: transition-colors duration-150
-- Loading spinner: animate-spin
-- Sidebar client selection: transition-colors duration-150
-- No page transitions, no scroll animations, no decorative effects
+### Results Detail View
+- Target header with current status
+- Chart showing response time over last 24h/7d/30d
+- Table of recent check results below chart
+- Filters for status (all, UP, DOWN) and time range
 
-## Accessibility Guidelines
+### CloudWatch Logs Interface
+- Log group selector (dropdown)
+- Query input field with pattern examples
+- Time range picker (last hour, 6h, 24h, custom)
+- Results in scrollable monospace container
+- Export/download button
 
-- All form inputs have visible labels with proper for/id associations
-- Focus states are clearly visible with ring utilities
-- Dropdown menus are keyboard navigable
-- Loading states announced with aria-live regions
-- Error messages associated with form fields via aria-describedby
-- Sufficient contrast ratios maintained throughout
-- Interactive elements have minimum 44x44px touch targets
+## Accessibility & Polish
+- All interactive elements keyboard accessible (tab navigation)
+- Focus indicators visible on all form fields and buttons
+- ARIA labels for icon-only buttons
+- Consistent spacing maintains visual rhythm throughout
+- Responsive breakpoints: mobile (base), tablet (md: 768px), desktop (lg: 1024px)
 
-## Images
+## Animation Principles
+**Minimal & Purposeful:**
+- Toast notifications: Slide-in transition (300ms ease-out)
+- Status changes: Subtle fade transition between states
+- Loading states: Simple spinner, no elaborate animations
+- No page transitions or scroll-triggered effects
 
-**No images required** - This is a data-focused dashboard application. All visual elements are UI components, icons, and data displays. No hero section, no decorative imagery needed.
+This design prioritizes clarity, efficiency, and data comprehension—essential for a monitoring tool where quick status assessment and troubleshooting are critical.
