@@ -76,10 +76,15 @@ export default {
           border: "var(--sidebar-accent-border)"
         },
         status: {
-          online: "rgb(34 197 94)",
-          away: "rgb(245 158 11)",
-          busy: "rgb(239 68 68)",
-          offline: "rgb(156 163 175)",
+          up: "hsl(142 76% 36%)",
+          "up-bg": "hsl(142 76% 95%)",
+          "up-bg-dark": "hsl(142 76% 15%)",
+          down: "hsl(0 84% 60%)",
+          "down-bg": "hsl(0 84% 96%)",
+          "down-bg-dark": "hsl(0 84% 20%)",
+          pending: "hsl(45 93% 47%)",
+          "pending-bg": "hsl(45 93% 95%)",
+          "pending-bg-dark": "hsl(45 93% 20%)",
         },
       },
       fontFamily: {
