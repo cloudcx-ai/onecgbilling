@@ -1,248 +1,173 @@
-# CloudCX Monitoring Solution
+# OneCG Genesys Billing Report
 
 ## Overview
-A comprehensive internal monitoring solution for HTTP/HTTPS, TCP, and ICMP endpoint health checks with real-time alerting, PostgreSQL data persistence, AWS CloudWatch Logs integration, and user authentication with role-based access control and Google Authenticator 2FA.
+A web application for managing multiple Genesys Cloud clients and generating comprehensive billing reports. The application integrates with Genesys Cloud API to fetch billing periods and subscription overview data.
 
-## Project Structure
+## Purpose
+Enable users to:
+- Manage multiple Genesys Cloud client credentials
+- View billing periods for each client
+- Generate detailed subscription reports with usage analytics
+- Track prepaid and monthly usage across product groups
+
+## Current State
+**Status**: MVP Complete and Functional
+
+The application is fully functional with:
+- ✅ Session-based authentication (username: once/onecg, password: once/onecg)
+- ✅ Protected routes with authentication guards
+- ✅ Client management (add, list, select)
+- ✅ Genesys API integration for billing data
+- ✅ Beautiful, responsive UI with professional design
+- ✅ Loading and error states throughout
+- ✅ Date range selection and Unix timestamp conversion
+- ✅ Comprehensive billing report display
+
+## Recent Changes
+- **2025-11-07**: Complex Billing Formula Implementation
+  - **Implemented comprehensive billing calculation** with support for prepaid/bundle pricing:
+    - Rule 1: Skip all third-party items (isThirdParty = true)
+    - Rule 2: If usage ≤ prepayQuantity: total = prepayQuantity × prepayPrice
+    - Rule 3: If usage > prepayQuantity: total = (prepayQuantity × prepayPrice) + ((usage - prepayQuantity) × overagePrice)
+    - Rule 4: If no prepay fields exist: total = usage × overagePrice
+    - Rule 5: If isCancellable = false & prepayPrice > 0: include prepay charge even if usage = 0
+  - **Enhanced Usage type** to include bundlePrice, prepaidQuantity, prepaidPrice fields
+  - **Created calculateUsageCharge helper** that applies all billing rules consistently
+  - **Updated all totals** (per-row, per-tab, and grand total) to use the same formula
+  - Formula supports both bundleQuantity/bundlePrice and prepaidQuantity/prepaidPrice field names
+
+- **2025-11-06**: UI Redesign - Genesys Cloud Billing Page Match
+  - **Redesigned billing report with tabbed interface**: Now matches Genesys Cloud Billing page layout
+    - Added 6 tabs: Users, Apps, Devices, Resources, Messaging, Storage
+    - Each tab filters usage data based on `grouping` field
+    - Users: filters `user-license`, `billable-app-usage-license`, `billable-app-concurrent-license`
+    - Apps: filters `billable-app-org-license`
+    - Devices: filters `device`
+    - Resources: filters `resource` (excludes Genesys Cloud Voice items)
+    - Messaging: filters `messaging`, `messaging-usage`
+    - Storage: filters `storage`, `storage-category`
+  - **Added Total Billing Amount display**: Shows sum of all tab totals at the top
+  - **Summary cards for each tab**: Display total items and total cost per category
+  - **Improved table structure**: Name, Part Number, Unit Type, Quantity, Price, Total
+  - **Excludes third-party items** from all calculations
+
+- **2025-10-24**: Critical Updates
+  - **Fixed session cookies for Railway deployment**: Added `trust proxy` setting and `sameSite: 'lax'` for proper session handling
+  - **Fixed login credentials**: Now accepts "once"/"once" OR "onecg"/"onecg"
+  - Initial MVP implementation with session-based auth, client management, and Genesys API integration
+
+## Project Architecture
 
 ### Frontend (React + TypeScript)
-- `client/src/pages/Dashboard.tsx` - Main dashboard with live monitoring metrics
-- `client/src/pages/TargetManage.tsx` - Add/edit monitoring targets
-- `client/src/pages/Results.tsx` - Historical check results with charts
-- `client/src/pages/Logs.tsx` - CloudWatch Logs viewer with AWS account selector
-- `client/src/pages/Channels.tsx` - Notification channels list and management
-- `client/src/pages/ChannelManage.tsx` - Add/edit notification channels
-- `client/src/pages/AwsAccounts.tsx` - AWS accounts list and management
-- `client/src/pages/AwsAccountManage.tsx` - Add/edit AWS account credentials
-- `client/src/pages/Login.tsx` - User login with 2FA support
-- `client/src/pages/Profile.tsx` - User profile and 2FA setup
-- `client/src/pages/AdminUsers.tsx` - Admin panel for user management
-- `client/src/components/TargetForm.tsx` - Reusable target configuration form
-- `client/src/components/StatusBadge.tsx` - Status indicators (UP/DOWN/PENDING)
-- `client/src/contexts/AuthContext.tsx` - Authentication state management
-- `client/src/hooks/useWebSocket.ts` - WebSocket hook for real-time updates
+- **Pages**: 
+  - `/login` - Authentication page
+  - `/dashboard` - Main application with sidebar and billing reports
+- **Components**:
+  - `AppSidebar` - Client list navigation using Shadcn sidebar primitives
+  - `AddClientDialog` - Form to add new clients
+  - `BillingReport` - Date selection and report display
+- **State Management**: React Query for server state
+- **Styling**: Tailwind CSS + Shadcn UI components
 
 ### Backend (Express + TypeScript)
-- `server/routes.ts` - API endpoints and WebSocket server
-- `server/storage.ts` - Database operations (PostgreSQL via Drizzle ORM)
-- `server/db.ts` - Database connection configuration
-- `server/auth.ts` - Authentication middleware and password hashing
-- `server/create-admin.ts` - Admin user creation script
-- `server/crypto-utils.ts` - AES-256-GCM encryption/decryption for AWS credentials
-- `server/health-checks.ts` - HTTP, TCP, and ICMP health check implementations
-- `server/scheduler.ts` - Automated check scheduling and state management
-- `server/alerts.ts` - SMTP email alerting on state transitions
-- `server/notifications.ts` - Multi-channel notification dispatcher (Slack, PagerDuty, Webhooks)
+- **Authentication**: Session-based with express-session
+- **Storage**: In-memory storage (MemStorage) for clients
+- **API Routes**:
+  - `POST /api/auth/login` - Login with hardcoded credentials
+  - `GET /api/auth/check` - Check authentication status
+  - `POST /api/auth/logout` - Logout and destroy session
+  - `GET /api/clients` - Fetch all clients (protected)
+  - `POST /api/clients` - Create new client (protected)
+  - `GET /api/billing/periods` - Proxy to Genesys API for billing periods (protected)
+  - `GET /api/billing/subscription` - Proxy to Genesys API for subscription overview (protected)
 
-### Shared
-- `shared/schema.ts` - Drizzle ORM schemas and Zod validation schemas
+### Data Model
+- **Client**: `{ id, name, authToken }`
+- **BillingPeriod**: `{ startDate, endDate }`
+- **SubscriptionOverview**: Complete subscription data with product groups, usage details
+
+## User Preferences
+- Clean, professional design following Linear/Material Design principles
+- Inter font for UI text, JetBrains Mono for technical data
+- Consistent spacing and color scheme
+- Minimal animations, focus on functionality
+- Data-first approach with clear visual hierarchy
 
 ## Key Features
 
-### Multi-Protocol Monitoring
-- **HTTP/HTTPS**: Full URL validation with status code checking and redirect following
-- **TCP**: Port connectivity checks for any TCP service
-- **ICMP**: Ping checks (limited on some platforms due to native module requirements)
-
-### Real-Time Updates
-- WebSocket connection provides instant notifications of status changes
-- Live dashboard metrics update automatically
-- Pulsing connection indicator shows WebSocket status
-
-### Intelligent Alerting
-- Multi-channel notification system (Email, Slack, PagerDuty, Webhooks)
-- Alerts sent only on state transitions (UP→DOWN and recovery)
-- Prevents alert flooding during outages
-- Customizable alert email per target (legacy support)
-- Centralized notification channel management
-- JSON-configurable channel settings with per-type validation
-- HTML-formatted alert messages with full context
-
-### Data Persistence
-- PostgreSQL database stores all target configurations and check results
-- Automatic cascade deletion of results when targets are deleted
-- Last 200 check results maintained per target for historical analysis
-
-### CloudWatch Integration
-- Multi-AWS account support with encrypted credential storage (AES-256-GCM)
-- Proxy API for querying CloudWatch Logs across multiple accounts
-- Configurable time ranges and filter patterns
-- Support for multiple log groups
-- Download logs as text file
-- Secure credential handling: credentials never exposed to frontend
-- Per-account CloudWatch access with region configuration
-
-### User Authentication & Authorization
-- Session-based authentication with PostgreSQL-backed session storage
-- Bcrypt password hashing for secure credential storage
-- Google Authenticator 2FA support with QR code setup
-- Role-based access control (admin/user roles)
-- Protected routes requiring authentication
-- Admin-only user management panel
-- Default admin account (username: admin, password: admin123)
-- TOTP secret encryption for 2FA security
-
-### Configuration
-All configuration is managed through environment variables (stored as secrets):
-
-- `API_KEY` - Protects all API endpoints (default: "demo-api-key")
-- `SESSION_SECRET` - Encryption key for AWS credentials (REQUIRED for multi-account feature, must be strong)
-- `AWS_REGION` - Legacy: AWS region for CloudWatch (default: "eu-west-2", superseded by per-account config)
-- `AWS_ACCESS_KEY_ID` - Legacy: AWS credentials for CloudWatch access (superseded by per-account config)
-- `AWS_SECRET_ACCESS_KEY` - Legacy: AWS secret key (superseded by per-account config)
-- `SMTP_HOST` - SMTP server hostname (default: "localhost")
-- `SMTP_PORT` - SMTP port (default: 25)
-- `SMTP_USER` - SMTP username (optional)
-- `SMTP_PASS` - SMTP password (optional)
-- `FROM_EMAIL` - Sender email address (default: "monitor@cloudcx.local")
-- `DATABASE_URL` - PostgreSQL connection string (auto-configured)
-
-## API Endpoints
-
-### Targets
-- `GET /api/targets` - List all monitoring targets
-- `POST /api/targets` - Create new target
-- `PUT /api/targets/:id` - Update target configuration
-- `DELETE /api/targets/:id` - Delete target and all results
-
-### Results
-- `GET /api/results/:targetId` - Get last 200 check results for a target
-
-### Notification Channels
-- `GET /api/channels` - List all notification channels
-- `POST /api/channels` - Create new channel (with JSON config validation)
-- `PUT /api/channels/:id` - Update channel configuration
-- `DELETE /api/channels/:id` - Delete notification channel
-
-### AWS Accounts
-- `GET /api/aws-accounts` - List all AWS accounts (credentials omitted for security)
-- `POST /api/aws-accounts` - Create new AWS account with encrypted credentials
-- `PUT /api/aws-accounts/:id` - Update AWS account (partial updates supported)
-- `DELETE /api/aws-accounts/:id` - Delete AWS account
-
-### CloudWatch Logs
-- `GET /api/logs?group=GROUP&q=PATTERN&since=SECONDS&accountId=ID` - Query CloudWatch Logs from specific account
-
 ### Authentication
-- `POST /api/auth/login` - Login with username, password, and optional 2FA code
-- `POST /api/auth/logout` - Logout current user
-- `GET /api/auth/me` - Get current authenticated user
-- `POST /api/auth/2fa/setup` - Generate 2FA secret and QR code
-- `POST /api/auth/2fa/enable` - Enable 2FA with verification code
-- `POST /api/auth/2fa/disable` - Disable 2FA for current user
+- Hardcoded credentials for MVP: `once/onecg` / `once/onecg`
+- Session-based auth with secure cookies
+- Protected routes redirect to login when unauthenticated
+- Auth check on dashboard mount
 
-### Admin User Management (Admin Only)
-- `GET /api/admin/users` - List all users
-- `POST /api/admin/users` - Create new user
-- `PUT /api/admin/users/:id` - Update user
-- `DELETE /api/admin/users/:id` - Delete user
+### Client Management
+- Add clients with name and Genesys Cloud authorization token
+- Tokens stored securely in backend, not exposed to client
+- Client list in sidebar with active state indication
+- Loading and error states for client operations
 
-### Health
-- `GET /api/healthz` - Application health check (no auth required)
+### Billing Reports
+1. Select client from sidebar
+2. Fetch available billing periods from Genesys API
+3. Choose date range (From/To) using month-year dropdowns
+4. Convert endDate to Unix timestamp (periodEndingTimestamp)
+5. Fetch subscription overview data
+6. Display comprehensive report with:
+   - Summary cards (subscription name, type, currency, ID)
+   - Billing period details with formatted dates
+   - Product groups with prepaid and monthly usage tables
 
-### WebSocket
-- `ws://HOST/ws` - Real-time check result notifications
+### API Integration
+- Genesys Cloud API Base: `https://api.euw2.pure.cloud`
+- Endpoints:
+  - `/api/v2/billing/periods?periodGranularity=month`
+  - `/api/v2/billing/subscriptionoverview?periodEndingTimestamp={timestamp}`
+- Authorization tokens passed via Bearer header
+- Proxy pattern to keep tokens secure
 
-All endpoints except `/api/healthz` and authentication endpoints require both `x-api-key` header and valid session authentication.
+## Technical Details
 
-## Database Schema
-
-### targets
-- `id` - Auto-incrementing primary key
-- `name` - Target display name
-- `type` - Check type (HTTP, TCP, ICMP)
-- `endpoint` - URL, host:port, or hostname
-- `frequency_sec` - Check interval in seconds (10-86400)
-- `expected_code` - Expected HTTP status code (optional)
-- `timeout_ms` - Request timeout in milliseconds (1000-60000)
-- `alert_email` - Email for alerts (optional, legacy support)
-- `enabled` - Whether checks are active
-- `created_at` - Timestamp of creation
-
-### results
-- `id` - Auto-incrementing primary key
-- `target_id` - Foreign key to targets (cascade delete)
-- `status` - UP or DOWN
-- `latency_ms` - Response time in milliseconds
-- `code` - HTTP status code or connection code
-- `message` - Error message or response text
-- `created_at` - Timestamp of check
-
-### notification_channels
-- `id` - Auto-incrementing primary key
-- `name` - Channel display name
-- `type` - Channel type (email, slack, pagerduty, webhook)
-- `enabled` - Whether channel is active
-- `config` - JSON configuration (validated per type)
-  - email: `{"email": "address@example.com"}`
-  - slack: `{"webhookUrl": "https://hooks.slack.com/..."}`
-  - pagerduty: `{"routingKey": "key"}`
-  - webhook: `{"url": "https://...", "method": "POST", "headers": {...}}`
-- `created_at` - Timestamp of creation
-
-### aws_accounts
-- `id` - Auto-incrementing primary key
-- `name` - Account display name
-- `region` - AWS region for CloudWatch (e.g., us-east-1, eu-west-2)
-- `access_key_id` - AWS access key ID (encrypted with AES-256-GCM)
-- `secret_access_key` - AWS secret access key (encrypted with AES-256-GCM)
-- `enabled` - Whether account is active for CloudWatch queries
-- `created_at` - Timestamp of creation
-
-## Design System
-
-Based on IBM Carbon Design System principles:
-- Professional, technical aesthetic suitable for monitoring dashboards
-- IBM Plex Sans for UI text, IBM Plex Mono for code/endpoints
-- Distinct color coding for status (green=UP, red=DOWN, yellow=PENDING)
-- Clean spacing and typography hierarchy
-- Responsive design for mobile and desktop
-- Dark mode support throughout
-
-## Development
-
-The application runs as a single process with both frontend (Vite) and backend (Express) on the same port. WebSocket connections are handled on a separate path (`/ws`) to avoid conflicts with Vite's HMR.
-
-### Starting the Application
-```bash
-npm run dev
+### Date Conversion
+```javascript
+const date = new Date(endDate);
+const periodEndingTimestamp = date.getTime();
 ```
 
-This starts both the Express backend (with API endpoints and WebSocket) and the Vite development server for the React frontend.
+### Error Handling
+- Network errors caught and displayed to user
+- Invalid credentials show error toast
+- Failed API calls show descriptive error messages
+- Retry options for failed operations
 
-### Database Migrations
-```bash
-npm run db:push
-```
+### Security
+- Tokens never exposed to frontend
+- All client/billing routes require authentication
+- Sessions expire after 24 hours
+- Secure cookies in production
 
-Drizzle ORM automatically syncs the schema to PostgreSQL without manual migration files.
+## Dependencies
+- **Frontend**: React, React Query, Wouter, Shadcn UI, Tailwind CSS, date-fns
+- **Backend**: Express, express-session, Axios, Drizzle ORM/Zod
+- **Development**: TypeScript, Vite, tsx
 
-## Architecture Decisions
+## Running the Application
+The application runs on port 5000 (both frontend and backend).
+- Start: `npm run dev`
+- The workflow "Start application" is configured to run this command
+- Application available at `http://localhost:5000`
 
-1. **Single Process Design**: Both frontend and backend run together for simplicity and ease of deployment on Replit
-2. **PostgreSQL over SQLite**: Better concurrency, reliability, and Replit integration
-3. **WebSocket for Real-time**: More efficient than polling for live updates
-4. **Scheduler in Memory**: Simple interval-based scheduler sufficient for moderate target counts
-5. **SMTP for Alerts**: Universal email support without third-party services
-6. **API Key Auth**: Simple but effective protection for internal monitoring tool
-7. **State-Change Alerts Only**: Prevents alert fatigue during extended outages
-8. **AES-256-GCM Encryption**: AWS credentials encrypted at rest using SESSION_SECRET as encryption key
-9. **Client-Safe API Design**: Credentials never exposed via API endpoints; server-side decryption only for CloudWatch queries
+## Environment Variables
+- `SESSION_SECRET`: Secret key for session encryption (has default for MVP)
+- `PORT`: Application port (defaults to 5000)
 
-## Limitations
-
-- ICMP ping checks require native modules (not available on some platforms including Replit)
-- Scheduler runs in memory (restarting the server resets check timing but preserves target configs)
-- No built-in user authentication (designed for internal use with API key protection)
-- Strong SESSION_SECRET required for AWS credential encryption (must be set in environment)
-
-## Future Enhancements
-
-- Multi-user support with authentication
-- Uptime percentage calculations and SLA tracking
-- Configurable data retention policies
-- Grafana/Prometheus export
-- Escalation policies
-- Maintenance windows
-- Audit logging for credential-using operations
-- Regression tests for credential security
+## Future Enhancements (Post-MVP)
+- Replace hardcoded auth with proper user management
+- Add persistent database storage (PostgreSQL)
+- Implement client edit and delete functionality
+- Add data export (CSV, PDF)
+- Create visual charts for billing analytics
+- Add date range validation
+- Implement pagination for large datasets
+- Add search and filter for clients
+- Support multiple API regions

@@ -1,118 +1,109 @@
-import { useState } from 'react';
-import { useLocation } from 'wouter';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { useState } from "react";
+import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 export default function Login() {
   const [, setLocation] = useLocation();
-  const { login } = useAuth();
   const { toast } = useToast();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [twoFactorCode, setTwoFactorCode] = useState('');
-  const [requires2FA, setRequires2FA] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setIsLoading(true);
 
     try {
-      const result = await login(username, password, twoFactorCode || undefined);
-      
-      if (result.requires2FA) {
-        setRequires2FA(true);
-        toast({
-          title: '2FA Required',
-          description: 'Please enter your 2FA code',
-        });
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (response.ok) {
+        setLocation("/dashboard");
       } else {
         toast({
-          title: 'Login successful',
-          description: 'Welcome back!',
+          variant: "destructive",
+          title: "Authentication Failed",
+          description: "Invalid username or password. Please try again.",
         });
-        // Use hard redirect to ensure user state is picked up
-        window.location.href = '/';
       }
-    } catch (error: any) {
+    } catch (error) {
       toast({
-        title: 'Login failed',
-        description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
+        title: "Error",
+        description: "An error occurred during login. Please try again.",
       });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>CloudCX Monitor Login</CardTitle>
+        <CardHeader className="space-y-2">
+          <CardTitle className="text-2xl font-bold">OneCG Genesys Billing</CardTitle>
           <CardDescription>
-            Enter your credentials to access the monitoring dashboard
+            Sign in to access your billing reports
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username" className="text-sm font-medium">
+                Username
+              </Label>
               <Input
                 id="username"
                 type="text"
+                placeholder="Enter your username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
+                disabled={isLoading}
                 data-testid="input-username"
+                className="h-10"
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-sm font-medium">
+                Password
+              </Label>
               <Input
                 id="password"
                 type="password"
+                placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={isLoading}
                 data-testid="input-password"
+                className="h-10"
               />
             </div>
-
-            {requires2FA && (
-              <div className="space-y-2">
-                <Label htmlFor="twoFactorCode">2FA Code</Label>
-                <Input
-                  id="twoFactorCode"
-                  type="text"
-                  value={twoFactorCode}
-                  onChange={(e) => setTwoFactorCode(e.target.value)}
-                  placeholder="Enter 6-digit code"
-                  maxLength={6}
-                  required
-                  data-testid="input-2fa-code"
-                />
-              </div>
-            )}
-
             <Button
               type="submit"
-              className="w-full"
-              disabled={loading}
+              className="w-full h-10"
+              disabled={isLoading}
               data-testid="button-login"
             >
-              {loading ? 'Logging in...' : requires2FA ? 'Verify 2FA' : 'Login'}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                "Sign In"
+              )}
             </Button>
           </form>
-
-          <div className="mt-4 text-sm text-muted-foreground text-center">
-            Default credentials: admin / admin123
-          </div>
         </CardContent>
       </Card>
     </div>

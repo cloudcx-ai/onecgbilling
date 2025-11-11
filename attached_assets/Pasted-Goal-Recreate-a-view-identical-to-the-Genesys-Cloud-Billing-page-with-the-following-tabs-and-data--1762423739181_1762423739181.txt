@@ -1,0 +1,75 @@
+Goal:
+Recreate a view identical to the Genesys Cloud Billing page, with the following tabs and data presentation:
+Tabs:
+Users, Apps, Devices, Resources (excludes Cloud Voice charges), Messaging, Storage
+Data Source
+Use the JSON data provided (site_response.txt).
+The main objects are:
+"currency": e.g., "USD"
+"enabledProducts": list of enabled products (for reference)
+"usages": array of all usage and billing entries
+"minimumMonthlyAmount" and "subscriptionType" for subscription details.
+Logic for Each Tab
+1. Users Tab
+Filter all usages with:
+"grouping": "user-license" OR "billable-app-usage-license" OR "billable-app-concurrent-license" 
+Display:
+name
+partNumber
+usageQuantity
+unitOfMeasureType
+overagePrice
+Calculate Total Amount = usageQuantity * overagePrice
+Sum all totals to show “Total User Charges”
+2. Apps Tab
+Filter all usages with:
+"grouping": "billable-app-org-license" 
+Display:
+name, usageQuantity, overagePrice
+Compute total = usageQuantity * overagePrice
+Show total Apps cost.
+3. Devices Tab
+Filter where:
+"grouping": "device" 
+Display:
+name, usageQuantity, overagePrice, unitOfMeasureType
+Total = usageQuantity * overagePrice
+4. Resources (Excludes Cloud Voice Charges) Tab
+Filter:
+"grouping": "resource" 
+Exclude where:
+"name" includes "Genesys Cloud Voice" 
+Show:
+name, partNumber, usageQuantity, overagePrice
+Total = usageQuantity * overagePrice
+5. Messaging Tab
+Include:
+"grouping": "messaging" OR "messaging-usage" 
+Display:
+name, unitOfMeasureType (e.g., message, number, conversation)
+usageQuantity, overagePrice
+Total = usageQuantity * overagePrice
+6. Storage Tab
+Include:
+"grouping": "storage" OR "storage-category" 
+Show:
+name, usageQuantity (GB), overagePrice
+Total = usageQuantity * overagePrice
+Additional Guidelines
+Currency: Use "currency" value from the JSON (USD).
+For any tab, include a summary card showing:
+Total items displayed
+Total cost (sum of calculated totals)
+Handle missing or zero usageQuantity gracefully (show 0).
+Exclude isThirdParty = true from calculations.
+For accurate billing:
+Display totalBillingAmount at the top of the billing view.
+UI Recommendation
+Match Genesys Cloud Billing Page layout:
+Tab navigation at the top
+Each tab with a sortable table
+Totals in footer or summary card
+Optional currency symbol next to each price (e.g., $12.50)
+Example table columns:
+Name | Unit Type | Quantity | Price (USD) | Total
+totalBillingAmount = sum(all tab totals)

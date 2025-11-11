@@ -5,17 +5,29 @@ import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 
-// Configure session middleware
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'development-secret-change-in-production',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+// Trust proxy - required for Railway and other cloud platforms
+app.set('trust proxy', 1);
+
+// Session configuration
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "onecg-genesys-billing-secret-key",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: 'lax', // Use 'lax' for same-site applications
+    },
+  })
+);
+
+declare module 'express-session' {
+  interface SessionData {
+    isAuthenticated: boolean;
   }
-}));
+}
 
 declare module 'http' {
   interface IncomingMessage {
